@@ -491,7 +491,9 @@ public:
 	// Returns a masked port number
 	static uint32_t Mask(uint32_t port_num, TransportProto port_type);
 
-	const PortVal* Get() const	{ return AsPortVal(); }
+	// This method is just here to trick the interface in `RecordVal::GetFieldAs` into
+	// returning the right type. It shouldn't actually be used for anything.
+	zeek::IntrusivePtr<PortVal> Get() { return { NewRef(), AsPortVal() }; }
 
 protected:
 	friend class ValManager;
@@ -1269,20 +1271,79 @@ public:
 	// underlying value.  We provide these to enable efficient
 	// access to record fields (without requiring an intermediary Val)
 	// if we change the underlying representation of records.
-	template <typename T>
-    auto GetFieldAs(int field) const -> std::invoke_result_t<decltype(&T::Get), T>
+	template <typename T,
+	          typename std::enable_if_t<std::is_fundamental_v<T>, bool> = true>
+    T GetFieldAs(int field) const
 		{
-		auto field_ptr = GetField(field);
-		auto field_val_ptr = static_cast<T*>(field_ptr.get());
-		return field_val_ptr->Get();
+		if ( ! (*is_in_record)[field] )
+			{
+			// TODO: should this be an error via reporter?
+			}
+
+		// TODO: this only support types that can be reduced to the requested
+		// type. For example, StringVal should return an error here.
+		return T{};
 		}
 
-	template <typename T>
-    auto GetFieldAs(const char* field) const -> std::invoke_result_t<decltype(&T::Get), T>
+	template <typename T,
+	          typename std::enable_if_t<!std::is_fundamental_v<T>, bool> = true>
+	auto GetFieldAs(int field) const -> std::invoke_result_t<decltype(&T::Get), T>
 		{
-		auto field_ptr = GetField(field);
-		auto field_val_ptr = static_cast<T*>(field_ptr.get());
-		return field_val_ptr->Get();
+		if ( ! (*is_in_record)[field] )
+			{
+			// TODO: should this be an error via reporter?
+			}
+
+		if constexpr ( std::is_same_v<T, BoolVal> || std::is_same_v<T, IntVal> || std::is_same_v<T, EnumVal> )
+			return record_val->at(field).int_val;
+		else if constexpr ( std::is_same_v<T, CountVal> )
+			return record_val->at(field).uint_val;
+		else if constexpr ( std::is_same_v<T, DoubleVal> || std::is_same_v<T, TimeVal> || std::is_same_v<T, IntervalVal> )
+			return record_val->at(field).double_val;
+		else if constexpr ( std::is_same_v<T, PortVal> )
+			return val_mgr->Port(record_val->at(field).uint_val);
+		else if constexpr ( std::is_same_v<T, StringVal> )
+			return record_val->at(field).string_val->Get();
+		else if constexpr ( std::is_same_v<T, AddrVal> )
+			return record_val->at(field).addr_val->Get();
+		else if constexpr ( std::is_same_v<T, SubNetVal> )
+			return record_val->at(field).subnet_val->Get();
+		else if constexpr ( std::is_same_v<T, File> )
+			return *(record_val->at(field).file_val);
+		else if constexpr ( std::is_same_v<T, Func> )
+			return *(record_val->at(field).func_val);
+		else if constexpr ( std::is_same_v<T, PatternVal> )
+			return record_val->at(field).re_val->Get();
+		else if constexpr ( std::is_same_v<T, TableVal> )
+			return record_val->at(field).table_val->Get();
+		else
+			{
+			// TODO: error here
+			}
+		}
+
+	template <typename T,
+	          typename std::enable_if_t<std::is_fundamental_v<T>, bool> = true>
+	T GetFieldAs(const char* field) const
+		{
+		int idx = GetType()->AsRecordType()->FieldOffset(field);
+
+		if ( idx < 0 )
+			reporter->InternalError("missing record field: %s", field);
+
+		return GetFieldAs<T>(idx);
+		}
+
+	template <typename T,
+	          typename std::enable_if_t<!std::is_fundamental_v<T>, bool> = true>
+	auto GetFieldAs(const char* field) const
+		{
+		int idx = GetType()->AsRecordType()->FieldOffset(field);
+
+		if ( idx < 0 )
+			reporter->InternalError("missing record field: %s", field);
+
+		return GetFieldAs<T>(idx);
 		}
 
 	/**
