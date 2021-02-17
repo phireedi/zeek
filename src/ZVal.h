@@ -6,22 +6,31 @@
 
 #include <variant>
 
+#include "zeek/IntrusivePtr.h"
 #include "zeek/Type.h"
 
-ZEEK_FORWARD_DECLARE_NAMESPACED(StringVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(AddrVal, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(SubNetVal, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(File, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(Func, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(BoolVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(CountVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(DoubleVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(EnumVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(FileVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(FuncVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(IntVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(IntervalVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(ListVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(OpaqueVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(PatternVal, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(TableVal, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(RecordVal, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(VectorVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(PortVal, zeek);
-ZEEK_FORWARD_DECLARE_NAMESPACED(Type, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(RecordVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(StringVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(SubNetVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(TableEntryVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(TableVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(TimeVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(TypeVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(Val, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(VectorVal, zeek);
 
 namespace zeek {
 
@@ -40,9 +49,8 @@ class ZVal {
 
 public:
 
-	// Constructor for hand-populating the values. This causes the variant
-	// to have a uint stored in it.
-	ZVal() : var(0) {}
+	// Constructor for hand-populating the values.
+	ZVal() = default;
 
 	// Construct from a given higher-level script value with a given type.
 	ZVal(ValPtr v, const TypePtr& t);
@@ -60,9 +68,27 @@ public:
 
 	friend void DeleteManagedType(ZVal& v);
 
-	std::variant<bro_int_t, bro_uint_t, double, StringVal*, AddrVal*, SubNetVal*,
-	             File*, Func*, ListVal*, OpaqueVal*, PatternVal*, TableVal*,
-	             RecordVal*, VectorVal*, Type*, Val*, Obj*, PortVal*> var;
+	std::variant<AddrVal*,
+	             BoolVal*,
+	             CountVal*,
+	             DoubleVal*,
+	             EnumVal*,
+	             FileVal*,
+	             FuncVal*,
+	             IntVal*,
+	             IntervalVal*,
+	             ListVal*,
+	             OpaqueVal*,
+	             PatternVal*,
+	             PortVal*,
+	             RecordVal*,
+	             StringVal*,
+	             SubNetVal*,
+	             TableVal*,
+	             TimeVal*,
+	             TypeVal*,
+	             Val*,
+	             VectorVal*> var;
 
 	// A class-wide status variable set to true when a run-time
 	// error associated with ZVal's occurs.  Static because often

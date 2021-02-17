@@ -1,6 +1,7 @@
 // See the file "COPYING" in the main distribution directory for copyright.
 
 #include "zeek/ZeekString.h"
+#include "zeek/Val.h"
 #include "zeek/File.h"
 #include "zeek/Func.h"
 #include "zeek/OpaqueVal.h"
@@ -9,9 +10,7 @@
 
 using namespace zeek;
 
-
 bool ZVal::zval_error_status = false;
-
 
 bool zeek::IsManagedType(const TypePtr& t)
 	{
@@ -61,60 +60,50 @@ ZVal::ZVal(ValPtr v, const TypePtr& t)
 
 	switch ( t->Tag() ) {
 	case TYPE_BOOL:
+		var = static_cast<BoolVal*>(v.release());
+		break;
 	case TYPE_INT:
+		var = static_cast<IntVal*>(v.release());
+		break;
 	case TYPE_ENUM:
-		var = v->AsInt();
+		var = static_cast<EnumVal*>(v.release());
 		break;
-
 	case TYPE_COUNT:
-		var = v->AsCount();
+		var = static_cast<CountVal*>(v.release());
 		break;
-
 	case TYPE_PORT:
-		var = v.release()->AsPortVal();
+		var = static_cast<PortVal*>(v.release());
 		break;
-
 	case TYPE_DOUBLE:
+		var = static_cast<DoubleVal*>(v.release());
+		break;
 	case TYPE_INTERVAL:
+		var = static_cast<IntervalVal*>(v.release());
+		break;
 	case TYPE_TIME:
-		var = v->AsDouble();
+		var = static_cast<TimeVal*>(v.release());
 		break;
-
 	case TYPE_FUNC:
-		{
-		Func* f = v->AsFunc();
-		var = f;
-		Ref(f);
+		var = static_cast<FuncVal*>(v.release());
 		break;
-		}
-
 	case TYPE_FILE:
-		{
-		File* f = v->AsFile();
-		var = f;
-		Ref(f);
+		var = static_cast<FileVal*>(v.release());
 		break;
-		}
-
 	case TYPE_LIST:
-		var = v.release()->AsListVal();
+		var = static_cast<ListVal*>(v.release());
 		break;
-
 	case TYPE_OPAQUE:
-		var = v.release()->AsOpaqueVal();
+		var = static_cast<OpaqueVal*>(v.release());
 		break;
-
 	case TYPE_PATTERN:
-		var = v.release()->AsPatternVal();
+		var = static_cast<PatternVal*>(v.release());
 		break;
-
 	case TYPE_TABLE:
-		var = v.release()->AsTableVal();
+		var = static_cast<TableVal*>(v.release());
 		break;
-
 	case TYPE_VECTOR:
 		{
-		var = v.release()->AsVectorVal();
+		var = static_cast<VectorVal*>(v.release());
 
 		// Some run-time type-checking, sigh.
 		auto my_ytag = t->AsVectorType()->Yield()->Tag();
@@ -138,27 +127,22 @@ ZVal::ZVal(ValPtr v, const TypePtr& t)
 		}
 
 	case TYPE_RECORD:
-		var = v.release()->AsRecordVal();
+		var = static_cast<RecordVal*>(v.release());
 		break;
-
 	case TYPE_STRING:
-		var = v.release()->AsStringVal();
+		var = static_cast<StringVal*>(v.release());
 		break;
-
 	case TYPE_ADDR:
-		var = v.release()->AsAddrVal();
+		var = static_cast<AddrVal*>(v.release());
 		break;
-
 	case TYPE_SUBNET:
-		var = v.release()->AsSubNetVal();
+		var = static_cast<SubNetVal*>(v.release());
 		break;
-
 	case TYPE_ANY:
 		var = static_cast<Val*>(v.release());
 		break;
-
 	case TYPE_TYPE:
-		var = t->Ref();
+		var = static_cast<TypeVal*>(v.release());
 		break;
 
 	case TYPE_ERROR:
@@ -175,82 +159,68 @@ ValPtr ZVal::ToVal(const TypePtr& t) const
 
 	switch ( t->Tag() ) {
 	case TYPE_INT:
-		return val_mgr->Int(std::get<bro_int_t>(var));
+		return {NewRef(), std::get<IntVal*>(var)};
 
 	case TYPE_BOOL:
-		return val_mgr->Bool(std::get<bro_int_t>(var) ? true : false);
+		return {NewRef(), std::get<BoolVal*>(var)};
 
 	case TYPE_PORT:
 		return {NewRef(), std::get<PortVal*>(var)};
 
 	case TYPE_COUNT:
-		return val_mgr->Count(std::get<bro_uint_t>(var));
+		return {NewRef(), std::get<CountVal*>(var)};
 
 	case TYPE_DOUBLE:
-		return make_intrusive<DoubleVal>(std::get<double>(var));
+		return {NewRef(), std::get<DoubleVal*>(var)};
 
 	case TYPE_INTERVAL:
-		return make_intrusive<IntervalVal>(std::get<double>(var), Seconds);
+		return {NewRef(), std::get<IntervalVal*>(var)};
 
 	case TYPE_TIME:
-		return make_intrusive<TimeVal>(std::get<double>(var));
+		return {NewRef(), std::get<TimeVal*>(var)};
 
 	case TYPE_ENUM:
-		return t->AsEnumType()->GetEnumVal(std::get<bro_int_t>(var));
+		return {NewRef(), std::get<EnumVal*>(var)};
 
 	case TYPE_ANY:
 		{
 		int index = var.index();
 		switch ( index )
 			{
-			case 3: return {NewRef(), std::get<StringVal*>(var)};
-			case 4: return {NewRef(), std::get<AddrVal*>(var)};
-			case 5: return {NewRef(), std::get<SubNetVal*>(var)};
-			case 8: return {NewRef(), std::get<ListVal*>(var)};
-			case 9: return {NewRef(), std::get<OpaqueVal*>(var)};
-			case 10: return {NewRef(), std::get<PatternVal*>(var)};
-			case 11: return {NewRef(), std::get<TableVal*>(var)};
-			case 12: return {NewRef(), std::get<RecordVal*>(var)};
-			case 13: return {NewRef(), std::get<VectorVal*>(var)};
-			case 14:
-				{
-				TypePtr tp = {NewRef{}, std::get<Type*>(var)};
-				return make_intrusive<TypeVal>(tp);
-				}
-			case 15: return {NewRef(), std::get<Val*>(var)};
+			case 0: return {NewRef(), std::get<AddrVal*>(var)};
+			case 1: return {NewRef(), std::get<BoolVal*>(var)};
+			case 2: return {NewRef(), std::get<CountVal*>(var)};
+			case 3: return {NewRef(), std::get<DoubleVal*>(var)};
+			case 4: return {NewRef(), std::get<EnumVal*>(var)};
+			case 5: return {NewRef(), std::get<FileVal*>(var)};
+			case 6: return {NewRef(), std::get<FuncVal*>(var)};
+			case 7: return {NewRef(), std::get<IntVal*>(var)};
+			case 8: return {NewRef(), std::get<IntervalVal*>(var)};
+			case 9: return {NewRef(), std::get<ListVal*>(var)};
+			case 10: return {NewRef(), std::get<OpaqueVal*>(var)};
+			case 11: return {NewRef(), std::get<PatternVal*>(var)};
+			case 12: return {NewRef(), std::get<PortVal*>(var)};
+			case 13: return {NewRef(), std::get<RecordVal*>(var)};
+			case 14: return {NewRef(), std::get<StringVal*>(var)};
+			case 15: return {NewRef(), std::get<SubNetVal*>(var)};
+			case 16: return {NewRef(), std::get<TableVal*>(var)};
+			case 17: return {NewRef(), std::get<TimeVal*>(var)};
+			case 18: return {NewRef(), std::get<TypeVal*>(var)};
+			case 19: return {NewRef(), std::get<Val*>(var)};
+			case 20: return {NewRef(), std::get<VectorVal*>(var)};
 			default: return nullptr;
 			}
-
-		// std::variant<bro_int_t, bro_uint_t, double, StringVal*, AddrVal*, SubNetVal*,
-		//              File*, Func*, ListVal*, OpaqueVal*, PatternVal*, TableVal*,
-		//              RecordVal*, VectorVal*, Type*, Val*, Obj*, PortVal*> var;
 		}
+		break;
 
 	case TYPE_TYPE:
-		{
-		TypePtr tp = {NewRef{}, std::get<Type*>(var)};
-		return make_intrusive<TypeVal>(tp);
-		}
+		return {NewRef(), std::get<TypeVal*>(var)};
 
 	case TYPE_FUNC:
-		{
-		if ( Func* f = std::get<Func*>(var) )
-			{
-			FuncPtr fv_ptr = {NewRef{}, f};
-			return make_intrusive<FuncVal>(fv_ptr);
-			}
-		}
-
-		return nullptr;
+		return {NewRef(), std::get<FuncVal*>(var)};
 
 	case TYPE_FILE:
-		if ( File* f = std::get<File*>(var) )
-			{
-			FilePtr fv_ptr = {NewRef{}, f};
-			return make_intrusive<FileVal>(fv_ptr);
-			}
-
-		return nullptr;
+		return {NewRef(), std::get<FileVal*>(var)};
 
 	case TYPE_ADDR:		return {NewRef(), std::get<AddrVal*>(var)};
 	case TYPE_SUBNET:	return {NewRef(), std::get<SubNetVal*>(var)};

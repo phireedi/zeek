@@ -1296,25 +1296,7 @@ public:
 			// TODO: should this be an error via reporter?
 			}
 
-		if constexpr ( std::is_same_v<T, BoolVal> || std::is_same_v<T, IntVal> || std::is_same_v<T, EnumVal> )
-			return std::get<bro_int_t>(record_val->at(field).var);
-		else if constexpr ( std::is_same_v<T, CountVal> )
-			return std::get<bro_uint_t>(record_val->at(field).var);
-		else if constexpr ( std::is_same_v<T, DoubleVal> || std::is_same_v<T, TimeVal> || std::is_same_v<T, IntervalVal> )
-			return std::get<double>(record_val->at(field).var);
-		else if constexpr ( std::is_same_v<T, PortVal> ||
-		                    std::is_same_v<T, StringVal> ||
-		                    std::is_same_v<T, AddrVal> ||
-		                    std::is_same_v<T, SubNetVal> ||
-		                    std::is_same_v<T, File> ||
-		                    std::is_same_v<T, Func> ||
-		                    std::is_same_v<T, PatternVal> ||
-		                    std::is_same_v<T, TableVal> )
-			return std::get<T*>(record_val->at(field).var)->Get();
-		else
-			{
-			// TODO: error here
-			}
+		return std::get<T*>(record_val->at(field).var)->Get();
 		}
 
 	template <typename T,
