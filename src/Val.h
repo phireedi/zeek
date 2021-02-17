@@ -1280,6 +1280,8 @@ public:
 			// TODO: should this be an error via reporter?
 			}
 
+//		if constexpr ( std::is_integral_v<T> )
+
 		// TODO: this only support types that can be reduced to the requested
 		// type. For example, StringVal should return an error here.
 		return T{};
@@ -1295,27 +1297,20 @@ public:
 			}
 
 		if constexpr ( std::is_same_v<T, BoolVal> || std::is_same_v<T, IntVal> || std::is_same_v<T, EnumVal> )
-			return record_val->at(field).int_val;
+			return std::get<bro_int_t>(record_val->at(field).var);
 		else if constexpr ( std::is_same_v<T, CountVal> )
-			return record_val->at(field).uint_val;
+			return std::get<bro_uint_t>(record_val->at(field).var);
 		else if constexpr ( std::is_same_v<T, DoubleVal> || std::is_same_v<T, TimeVal> || std::is_same_v<T, IntervalVal> )
-			return record_val->at(field).double_val;
-		else if constexpr ( std::is_same_v<T, PortVal> )
-			return val_mgr->Port(record_val->at(field).uint_val);
-		else if constexpr ( std::is_same_v<T, StringVal> )
-			return record_val->at(field).string_val->Get();
-		else if constexpr ( std::is_same_v<T, AddrVal> )
-			return record_val->at(field).addr_val->Get();
-		else if constexpr ( std::is_same_v<T, SubNetVal> )
-			return record_val->at(field).subnet_val->Get();
-		else if constexpr ( std::is_same_v<T, File> )
-			return *(record_val->at(field).file_val);
-		else if constexpr ( std::is_same_v<T, Func> )
-			return *(record_val->at(field).func_val);
-		else if constexpr ( std::is_same_v<T, PatternVal> )
-			return record_val->at(field).re_val->Get();
-		else if constexpr ( std::is_same_v<T, TableVal> )
-			return record_val->at(field).table_val->Get();
+			return std::get<double>(record_val->at(field).var);
+		else if constexpr ( std::is_same_v<T, PortVal> ||
+		                    std::is_same_v<T, StringVal> ||
+		                    std::is_same_v<T, AddrVal> ||
+		                    std::is_same_v<T, SubNetVal> ||
+		                    std::is_same_v<T, File> ||
+		                    std::is_same_v<T, Func> ||
+		                    std::is_same_v<T, PatternVal> ||
+		                    std::is_same_v<T, TableVal> )
+			return std::get<T*>(record_val->at(field).var)->Get();
 		else
 			{
 			// TODO: error here

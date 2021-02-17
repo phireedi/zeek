@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include <unordered_set>
+#include <variant>
 
-#include "zeek/Dict.h"
-#include "zeek/Expr.h"
+#include "zeek/Type.h"
 
 ZEEK_FORWARD_DECLARE_NAMESPACED(StringVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(AddrVal, zeek);
@@ -20,6 +19,7 @@ ZEEK_FORWARD_DECLARE_NAMESPACED(PatternVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(TableVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(RecordVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(VectorVal, zeek);
+ZEEK_FORWARD_DECLARE_NAMESPACED(PortVal, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(Type, zeek);
 ZEEK_FORWARD_DECLARE_NAMESPACED(Val, zeek);
 
@@ -36,9 +36,13 @@ namespace zeek {
 // to the managed_val member, which both simplifies memory management
 // and is also required for sharing of ZAM frame slots.
 
-union ZVal {
-	// Constructor for hand-populating the values.
-	ZVal() { managed_val = nullptr; }
+class ZVal {
+
+public:
+
+	// Constructor for hand-populating the values. This causes the variant
+	// to have a uint stored in it.
+	ZVal() : var(0) {}
 
 	// Construct from a given higher-level script value with a given type.
 	ZVal(ValPtr v, const TypePtr& t);
@@ -56,37 +60,9 @@ union ZVal {
 
 	friend void DeleteManagedType(ZVal& v);
 
-	// Used for bool, int, enum.
-	bro_int_t int_val;
-
-	// Used for count and port.
-	bro_uint_t uint_val;
-
-	// Used for double, time, interval.
-	double double_val;
-
-	// The types are all variants of Val, Type, or more fundamentally
-	// Obj.  They are raw pointers rather than IntrusivePtr's because
-	// unions can't contain the latter.  For memory management, we use
-	// Ref/Unref.
-	StringVal* string_val;
-	AddrVal* addr_val;
-	SubNetVal* subnet_val;
-	File* file_val;
-	Func* func_val;
-	ListVal* list_val;
-	OpaqueVal* opaque_val;
-	PatternVal* re_val;
-	TableVal* table_val;
-	RecordVal* record_val;
-	VectorVal* vector_val;
-	Type* type_val;
-
-	// Used for "any" values.
-	Val* any_val;
-
-	// Used for generic access to managed (derived-from-Obj) objects.
-	Obj* managed_val;
+	std::variant<bro_int_t, bro_uint_t, double, StringVal*, AddrVal*, SubNetVal*,
+	             File*, Func*, ListVal*, OpaqueVal*, PatternVal*, TableVal*,
+	             RecordVal*, VectorVal*, Type*, Val*, Obj*, PortVal*> var;
 
 	// A class-wide status variable set to true when a run-time
 	// error associated with ZVal's occurs.  Static because often
@@ -104,7 +80,8 @@ bool IsManagedType(const TypePtr& t);
 // indeed holds such.
 inline void DeleteManagedType(ZVal& v)
 	{
-	Unref(v.managed_val);
+	// auto o = std::get<Obj*>(v);
+	// Unref(o);
 	}
 
 // Deletes a possibly-managed value.
