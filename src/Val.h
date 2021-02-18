@@ -7,6 +7,7 @@
 #include <list>
 #include <array>
 #include <unordered_map>
+#include <type_traits>
 
 #include "zeek/IntrusivePtr.h"
 #include "zeek/Type.h"
@@ -1272,15 +1273,13 @@ public:
 	// access to record fields (without requiring an intermediary Val)
 	// if we change the underlying representation of records.
 	template <typename T,
-	          typename std::enable_if_t<std::is_fundamental_v<T>, bool> = true>
-    T GetFieldAs(int field) const
+	          typename std::enable_if_t<!std::is_convertible_v<T, zeek::Val>, bool> = true>
+	T GetFieldAs(int field) const
 		{
 		if ( ! (*is_in_record)[field] )
 			{
 			// TODO: should this be an error via reporter?
 			}
-
-//		if constexpr ( std::is_integral_v<T> )
 
 		// TODO: this only support types that can be reduced to the requested
 		// type. For example, StringVal should return an error here.
@@ -1288,7 +1287,7 @@ public:
 		}
 
 	template <typename T,
-	          typename std::enable_if_t<!std::is_fundamental_v<T>, bool> = true>
+	          typename std::enable_if_t<std::is_convertible_v<T, zeek::Val>, bool> = true>
 	auto GetFieldAs(int field) const -> std::invoke_result_t<decltype(&T::Get), T>
 		{
 		if ( ! (*is_in_record)[field] )
@@ -1300,7 +1299,7 @@ public:
 		}
 
 	template <typename T,
-	          typename std::enable_if_t<std::is_fundamental_v<T>, bool> = true>
+	          typename std::enable_if_t<!std::is_convertible_v<T, Val>, bool> = true>
 	T GetFieldAs(const char* field) const
 		{
 		int idx = GetType()->AsRecordType()->FieldOffset(field);
@@ -1312,7 +1311,7 @@ public:
 		}
 
 	template <typename T,
-	          typename std::enable_if_t<!std::is_fundamental_v<T>, bool> = true>
+	          typename std::enable_if_t<std::is_convertible_v<T, Val>, bool> = true>
 	auto GetFieldAs(const char* field) const
 		{
 		int idx = GetType()->AsRecordType()->FieldOffset(field);
