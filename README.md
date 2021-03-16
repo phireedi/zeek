@@ -6,6 +6,8 @@ The Zeek Network Security Monitor
 
 </h1><h4 align="center">
 
+<div id='zeekui-declare'>NOW WITH ZEEK UI!!!</div>
+
 A [powerful](https://old.zeek.org/why_choose_zeek.pdf) framework for network
 traffic analysis and security monitoring.
 
